@@ -91,6 +91,13 @@ enum HealthDataType {
   HEADACHE_SEVERE,
   HEADACHE_UNSPECIFIED,
   NUTRITION,
+  // 最大摄氧量
+  VO2MAX,
+  // 晒太阳时间
+  UV_EXPOSURE,
+  // 手腕温度
+  WRIST_TEMPERATURE,
+
   // HealthKit Characteristics
   GENDER,
   BIRTH_DATE,
@@ -208,6 +215,9 @@ const List<HealthDataType> dataTypeKeysIOS = [
   HealthDataType.BIRTH_DATE,
   HealthDataType.BLOOD_TYPE,
   HealthDataType.MENSTRUATION_FLOW,
+  HealthDataType.VO2MAX,
+  HealthDataType.UV_EXPOSURE,
+  HealthDataType.WRIST_TEMPERATURE,
 ];
 
 /// List of data types available on Android
@@ -358,6 +368,10 @@ const Map<HealthDataType, HealthDataUnit> dataTypeToUnit = {
 
   // Health Connect
   HealthDataType.TOTAL_CALORIES_BURNED: HealthDataUnit.KILOCALORIE,
+
+  HealthDataType.VO2MAX: HealthDataUnit.VO2MAX,
+  HealthDataType.UV_EXPOSURE: HealthDataUnit.COUNT,
+  HealthDataType.WRIST_TEMPERATURE: HealthDataUnit.DEGREE_CELSIUS,
 };
 
 // const PlatformTypeJsonValue = {
@@ -444,6 +458,10 @@ enum HealthDataUnit {
   MILLIGRAM_PER_DECILITER,
   UNKNOWN_UNIT,
   NO_UNIT,
+  // 最大摄氧量
+  VO2MAX,
+  // 晒太阳
+  UV_EXPOSURE
 }
 
 /// List of [HealthWorkoutActivityType]s.
@@ -634,8 +652,7 @@ enum InsulinDeliveryReason {
 }
 
 /// Extension to assign numbers to [ElectrocardiogramClassification]s
-extension ElectrocardiogramClassificationValue
-    on ElectrocardiogramClassification {
+extension ElectrocardiogramClassificationValue on ElectrocardiogramClassification {
   int get value => switch (this) {
         ElectrocardiogramClassification.NOT_SET => 0,
         ElectrocardiogramClassification.SINUS_RHYTHM => 1,

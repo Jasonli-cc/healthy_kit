@@ -155,7 +155,11 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let GENDER = "GENDER"
     let BLOOD_TYPE = "BLOOD_TYPE"
     let MENSTRUATION_FLOW = "MENSTRUATION_FLOW"
-    
+
+    let VO2MAX = "VO2MAX"
+    let UV_EXPOSURE = "UV_EXPOSURE"
+    let WRIST_TEMPERATURE = "WRIST_TEMPERATURE"
+
     
     // Health Unit types
     // MOLE_UNIT_WITH_MOLAR_MASS, // requires molar mass input - not supported yet
@@ -761,6 +765,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         if let dataUnitKey = dataUnitKey {
             unit = unitDict[dataUnitKey]
         }
+
+        print("Health get data: dataTypeKey=\(dataTypeKey)  dataUnitKey=\(dataUnitKey)  dataType=\(dataType)  unit=\(unit)");
         
         let sourceIdForCharacteristic = "com.apple.Health"
         let sourceNameForCharacteristic = "Health"
@@ -816,13 +822,15 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             predicate = NSCompoundPredicate(type: .and, subpredicates: [predicate, manualPredicate])
         }
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        
+
+        print("HealthyGetData:  dataType: \(dataType)   \(dateFrom) - \(dateTo)")
         let query = HKSampleQuery(
             sampleType: dataType, predicate: predicate, limit: limit, sortDescriptors: [sortDescriptor]
         ) {
             [self]
             x, samplesOrNil, error in
-            
+
+            print("HealthyGetData:  samplesOrNil: \(samplesOrNil) \n ")
             switch samplesOrNil {
             case let (samples as [HKQuantitySample]) as Any:
                 let dictionaries = samples.map { sample -> NSDictionary in
@@ -1279,7 +1287,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         unitDict[MILLIGRAM_PER_DECILITER] = HKUnit.init(from: "mg/dL")
         unitDict[UNKNOWN_UNIT] = HKUnit.init(from: "")
         unitDict[NO_UNIT] = HKUnit.init(from: "")
-        
+
+        unitDict[VO2MAX] = HKUnit.init(from: "ml/kg").unitDivided(by: .minute())
+        unitDict[UV_EXPOSURE] = HKUnit.init(from: "W/m^2")
+
         // Initialize workout types
         workoutActivityTypeMap["ARCHERY"] = .archery
         workoutActivityTypeMap["BOWLING"] = .bowling
@@ -1469,10 +1480,16 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataTypesDict[SLEEP_DEEP] = HKSampleType.categoryType(forIdentifier: .sleepAnalysis)!
             dataTypesDict[SLEEP_REM] = HKSampleType.categoryType(forIdentifier: .sleepAnalysis)!
             dataTypesDict[MENSTRUATION_FLOW] = HKSampleType.categoryType(forIdentifier: .menstrualFlow)!
-            
-            
+
+
             dataTypesDict[EXERCISE_TIME] = HKSampleType.quantityType(forIdentifier: .appleExerciseTime)!
+            dataTypesDict[VO2MAX] = HKSampleType.quantityType(forIdentifier: .vo2Max)!
+
+
             dataTypesDict[WORKOUT] = HKSampleType.workoutType()
+
+            dataTypesDict[UV_EXPOSURE] = HKSampleType.quantityType(forIdentifier: .uvExposure)!
+
             dataTypesDict[NUTRITION] = HKSampleType.correlationType(
                 forIdentifier: .food)!
             
@@ -1495,6 +1512,9 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataQuantityTypesDict[BODY_FAT_PERCENTAGE] = HKQuantityType.quantityType(forIdentifier: .bodyFatPercentage)!
             dataQuantityTypesDict[BODY_MASS_INDEX] = HKQuantityType.quantityType(forIdentifier: .bodyMassIndex)!
             dataQuantityTypesDict[BODY_TEMPERATURE] = HKQuantityType.quantityType(forIdentifier: .bodyTemperature)!
+
+            dataQuantityTypesDict[VO2MAX] = HKSampleType.quantityType(forIdentifier: .vo2Max)!
+            dataQuantityTypesDict[UV_EXPOSURE] = HKSampleType.quantityType(forIdentifier: .uvExposure)!
             
             // Nutrition
             dataQuantityTypesDict[DIETARY_CARBS_CONSUMED] = HKSampleType.quantityType(forIdentifier: .dietaryCarbohydrates)!
@@ -1585,14 +1605,18 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         
         if #available(iOS 14.0, *) {
             dataTypesDict[ELECTROCARDIOGRAM] = HKSampleType.electrocardiogramType()
-            
+
             unitDict[VOLT] = HKUnit.volt()
             unitDict[INCHES_OF_MERCURY] = HKUnit.inchesOfMercury()
-            
+
             workoutActivityTypeMap["CARDIO_DANCE"] = HKWorkoutActivityType.cardioDance
             workoutActivityTypeMap["SOCIAL_DANCE"] = HKWorkoutActivityType.socialDance
             workoutActivityTypeMap["PICKLEBALL"] = HKWorkoutActivityType.pickleball
             workoutActivityTypeMap["COOLDOWN"] = HKWorkoutActivityType.cooldown
+        }
+
+        if #available(iOS 16.0, *){
+            dataTypesDict[WRIST_TEMPERATURE] = HKSampleType.quantityType(forIdentifier: .appleSleepingWristTemperature)!
         }
         
         // Concatenate heart events, headache and health data types (both may be empty)
