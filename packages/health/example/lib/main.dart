@@ -125,8 +125,8 @@ class _HealthAppState extends State<HealthApp> {
     try {
       // fetch health data
       List<HealthDataPoint> healthData = await Health().getHealthDataFromTypes(
-        types: [HealthDataType.UV_EXPOSURE],
-        startTime: yesterday.subtract(const Duration(days: 3)),
+        types: [],
+        startTime: DateTime(now.year, now.month, now.day),
         endTime: now,
       );
 
@@ -146,6 +146,10 @@ class _HealthAppState extends State<HealthApp> {
     setState(() {
       _state = _healthDataList.isEmpty ? AppState.NO_DATA : AppState.DATA_READY;
     });
+  }
+
+  Future<void> fetchActivityRingData(DateTime date)async{
+
   }
 
   /// Add some random health data.

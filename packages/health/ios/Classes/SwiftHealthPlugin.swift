@@ -159,6 +159,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let VO2MAX = "VO2MAX"
     let UV_EXPOSURE = "UV_EXPOSURE"
     let WRIST_TEMPERATURE = "WRIST_TEMPERATURE"
+    let ACTIVITY_RING = "ACTIVITY_RING"
 
     
     // Health Unit types
@@ -363,6 +364,32 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             return nil
         }
     }
+
+    func getActivityRingData(call: FlutterMethodCall, result: @escaping FlutterResult)throws{
+            let calendar = Calendar.current
+            let now = Date()
+            // 获取今天的日期组件
+            let today = calendar.dateComponents([.year, .month, .day], from: now)
+            // 创建查询对象
+            let query = HKActivitySummaryQuery(predicate: HKQuery.predicateForActivitySummary(with: today)) { (query, summaries, error) in
+                guard let summaries = summaries, let summary = summaries.first else {
+                    print("无法获取活动数据: \(error?.localizedDescription ?? "未知错误")")
+                    return
+                }
+                // 获取目标值
+                let activeEnergyGoal = summary.activeEnergyBurnedGoal.doubleValue(for: HKUnit.kilocalorie())
+                let exerciseTimeGoal = summary.appleExerciseTimeGoal.doubleValue(for: HKUnit.minute())
+                let standHoursGoal = summary.appleStandHoursGoal.doubleValue(for: HKUnit.count())
+                // 返回目标值
+                result([
+                "activeEnergyGoal":activeEnergyGoal,
+                "exerciseTimeGoal":exerciseTimeGoal,
+                "standHoursGoal":standHoursGoal,
+                ])
+            }
+            // 执行查询
+            healthStore.execute(query)
+    }
     
     func requestAuthorization(call: FlutterMethodCall, result: @escaping FlutterResult) throws {
         guard let arguments = call.arguments as? NSDictionary,
@@ -374,6 +401,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         }
         
         var typesToRead = Set<HKObjectType>()
+        typesToRead.insert(HKObjectType.activitySummaryType())
         var typesToWrite = Set<HKSampleType>()
         for (index, key) in types.enumerated() {
             if (key == NUTRITION) {
@@ -1484,7 +1512,6 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
 
             dataTypesDict[EXERCISE_TIME] = HKSampleType.quantityType(forIdentifier: .appleExerciseTime)!
             dataTypesDict[VO2MAX] = HKSampleType.quantityType(forIdentifier: .vo2Max)!
-
 
             dataTypesDict[WORKOUT] = HKSampleType.workoutType()
 
