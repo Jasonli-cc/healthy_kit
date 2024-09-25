@@ -111,6 +111,10 @@ class _HealthAppState extends State<HealthApp> {
     });
   }
 
+  void fetchActivityRingData() {
+    Health().getActivityRingData();
+  }
+
   /// Fetch data points from the health plugin and show them in the app.
   Future<void> fetchData() async {
     setState(() => _state = AppState.FETCHING_DATA);
@@ -146,10 +150,6 @@ class _HealthAppState extends State<HealthApp> {
     setState(() {
       _state = _healthDataList.isEmpty ? AppState.NO_DATA : AppState.DATA_READY;
     });
-  }
-
-  Future<void> fetchActivityRingData(DateTime date)async{
-
   }
 
   /// Add some random health data.
@@ -376,6 +376,12 @@ class _HealthAppState extends State<HealthApp> {
                       child: Text("Fetch Data", style: TextStyle(color: Colors.white)),
                       style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
                   TextButton(
+                      onPressed: (){
+                        fetchActivityRingData();
+                      },
+                      child: Text("Activity Ring", style: TextStyle(color: Colors.white)),
+                      style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
+                  TextButton(
                       onPressed: addData,
                       child: Text("Add Data", style: TextStyle(color: Colors.white)),
                       style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
@@ -518,3 +524,5 @@ class _HealthAppState extends State<HealthApp> {
         AppState.PERMISSIONS_NOT_REVOKED => _permissionsNotRevoked,
       };
 }
+
+

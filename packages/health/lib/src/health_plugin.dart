@@ -71,6 +71,10 @@ class Health {
   /// Check if a given data type is available on the platform
   bool isDataTypeAvailable(HealthDataType dataType) => Platform.isAndroid ? dataTypeKeysAndroid.contains(dataType) : dataTypeKeysIOS.contains(dataType);
 
+  Future<void> getActivityRingData()async{
+    await _channel.invokeMethod('getActivityRingData');
+  }
+
   /// Determines if the health data [types] have been granted with the specified
   /// access rights [permissions].
   ///

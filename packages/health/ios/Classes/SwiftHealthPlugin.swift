@@ -301,6 +301,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         else if (call.method.elementsEqual("disconnect")){
             // Do nothing.
             result(true)
+        }else if(call.method.elementsEqual("getActivityRingData")){
+          try! self.getActivityRingData(call: call, result: result)
         }
         
     }
