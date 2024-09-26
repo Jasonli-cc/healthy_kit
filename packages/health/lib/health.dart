@@ -5,10 +5,13 @@ import 'dart:collection';
 import 'dart:io' show Platform;
 
 import 'package:carp_serializable/carp_serializable.dart';
+import 'package:intl/intl.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+
+import 'src/health_activity_summary.dart';
 
 part 'src/heath_data_types.dart';
 part 'src/functions.dart';

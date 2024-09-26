@@ -94,10 +94,11 @@ enum HealthDataType {
   // 最大摄氧量
   VO2MAX,
   // 晒太阳时间
-  UV_EXPOSURE,
+  TIME_IN_DAY_LIGHT,
   // 手腕温度
   WRIST_TEMPERATURE,
-
+  // 健身圆环
+  ACTIVITY_RING,
   // HealthKit Characteristics
   GENDER,
   BIRTH_DATE,
@@ -216,7 +217,7 @@ const List<HealthDataType> dataTypeKeysIOS = [
   HealthDataType.BLOOD_TYPE,
   HealthDataType.MENSTRUATION_FLOW,
   HealthDataType.VO2MAX,
-  HealthDataType.UV_EXPOSURE,
+  HealthDataType.TIME_IN_DAY_LIGHT,
   HealthDataType.WRIST_TEMPERATURE,
 ];
 
@@ -370,7 +371,7 @@ const Map<HealthDataType, HealthDataUnit> dataTypeToUnit = {
   HealthDataType.TOTAL_CALORIES_BURNED: HealthDataUnit.KILOCALORIE,
 
   HealthDataType.VO2MAX: HealthDataUnit.VO2MAX,
-  HealthDataType.UV_EXPOSURE: HealthDataUnit.COUNT,
+  HealthDataType.TIME_IN_DAY_LIGHT: HealthDataUnit.MINUTE,
   HealthDataType.WRIST_TEMPERATURE: HealthDataUnit.DEGREE_CELSIUS,
 };
 

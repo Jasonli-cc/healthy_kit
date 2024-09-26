@@ -157,7 +157,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let MENSTRUATION_FLOW = "MENSTRUATION_FLOW"
 
     let VO2MAX = "VO2MAX"
-    let UV_EXPOSURE = "UV_EXPOSURE"
+    let TIME_IN_DAY_LIGHT = "TIME_IN_DAY_LIGHT"
     let WRIST_TEMPERATURE = "WRIST_TEMPERATURE"
     let ACTIVITY_RING = "ACTIVITY_RING"
 
@@ -368,29 +368,50 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     }
 
     func getActivityRingData(call: FlutterMethodCall, result: @escaping FlutterResult)throws{
-            let calendar = Calendar.current
-            let now = Date()
-            // 获取今天的日期组件
-            let today = calendar.dateComponents([.year, .month, .day], from: now)
-            // 创建查询对象
-            let query = HKActivitySummaryQuery(predicate: HKQuery.predicateForActivitySummary(with: today)) { (query, summaries, error) in
-                guard let summaries = summaries, let summary = summaries.first else {
-                    print("无法获取活动数据: \(error?.localizedDescription ?? "未知错误")")
-                    return
-                }
-                // 获取目标值
-                let activeEnergyGoal = summary.activeEnergyBurnedGoal.doubleValue(for: HKUnit.kilocalorie())
-                let exerciseTimeGoal = summary.appleExerciseTimeGoal.doubleValue(for: HKUnit.minute())
-                let standHoursGoal = summary.appleStandHoursGoal.doubleValue(for: HKUnit.count())
-                // 返回目标值
-                result([
-                "activeEnergyGoal":activeEnergyGoal,
-                "exerciseTimeGoal":exerciseTimeGoal,
-                "standHoursGoal":standHoursGoal,
-                ])
+        let calendar = NSCalendar.current
+        let dateFormatter = DateFormatter()
+        // 设置日期格式，匹配字符串格式 "yyyy-MM-dd"
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let arguments = call.arguments as? NSDictionary
+        var startDate:Date? = dateFormatter.date(from: arguments?["start"] as? String ?? "")
+        var endDate:Date? = dateFormatter.date(from: arguments?["end"] as? String ?? "")
+
+        guard startDate != nil && endDate != nil else{
+            result([])
+            return
+        }
+
+        let units: Set<Calendar.Component> = [.day, .month, .year, .era]
+
+        var startDateComponents = calendar.dateComponents(units, from: startDate!)
+        startDateComponents.calendar = calendar
+
+
+        var endDateComponents = calendar.dateComponents(units, from: endDate!)
+        endDateComponents.calendar = calendar
+        let summariesWithinRange = HKQuery.predicate(forActivitySummariesBetweenStart: startDateComponents,
+                                                     end: endDateComponents)
+
+
+        let query = HKActivitySummaryQuery(predicate: summariesWithinRange) { (query, summariesOrNil, errorOrNil) -> Void in
+            guard let summaries = summariesOrNil
+            else {
+                return
             }
-            // 执行查询
-            healthStore.execute(query)
+            let dictionaries = summaries.map { summary -> NSDictionary in
+                return [
+                   "activeEnergyBurned": summary.activeEnergyBurned.doubleValue(for: .kilocalorie()),
+                   "activeEnergyBurnedGoal": summary.activeEnergyBurnedGoal.doubleValue(for: .kilocalorie()),
+                   "appleExerciseTime": summary.appleExerciseTime.doubleValue(for: .minute()),
+                   "appleExerciseTimeGoal": summary.appleExerciseTimeGoal.doubleValue(for: .minute()),
+                   "appleStandHours": summary.appleStandHours.doubleValue(for: .count()),
+                   "appleStandHoursGoal": summary.appleStandHoursGoal.doubleValue(for: .count()),
+                   "date": dateFormatter.string(from: summary.dateComponents(for: Calendar.current).date!)
+                ]
+            }
+            result(dictionaries)
+        }
+        healthStore.execute(query)
     }
     
     func requestAuthorization(call: FlutterMethodCall, result: @escaping FlutterResult) throws {
@@ -403,7 +424,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         }
         
         var typesToRead = Set<HKObjectType>()
-        typesToRead.insert(HKObjectType.activitySummaryType())
+        typesToRead.insert(.activitySummaryType())
         var typesToWrite = Set<HKSampleType>()
         for (index, key) in types.enumerated() {
             if (key == NUTRITION) {
@@ -860,7 +881,6 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             [self]
             x, samplesOrNil, error in
 
-            print("HealthyGetData:  samplesOrNil: \(samplesOrNil) \n ")
             switch samplesOrNil {
             case let (samples as [HKQuantitySample]) as Any:
                 let dictionaries = samples.map { sample -> NSDictionary in
@@ -1319,7 +1339,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         unitDict[NO_UNIT] = HKUnit.init(from: "")
 
         unitDict[VO2MAX] = HKUnit.init(from: "ml/kg").unitDivided(by: .minute())
-        unitDict[UV_EXPOSURE] = HKUnit.init(from: "W/m^2")
+        unitDict[TIME_IN_DAY_LIGHT] = HKUnit.minute()
 
         // Initialize workout types
         workoutActivityTypeMap["ARCHERY"] = .archery
@@ -1516,9 +1536,6 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataTypesDict[VO2MAX] = HKSampleType.quantityType(forIdentifier: .vo2Max)!
 
             dataTypesDict[WORKOUT] = HKSampleType.workoutType()
-
-            dataTypesDict[UV_EXPOSURE] = HKSampleType.quantityType(forIdentifier: .uvExposure)!
-
             dataTypesDict[NUTRITION] = HKSampleType.correlationType(
                 forIdentifier: .food)!
             
@@ -1543,7 +1560,6 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataQuantityTypesDict[BODY_TEMPERATURE] = HKQuantityType.quantityType(forIdentifier: .bodyTemperature)!
 
             dataQuantityTypesDict[VO2MAX] = HKSampleType.quantityType(forIdentifier: .vo2Max)!
-            dataQuantityTypesDict[UV_EXPOSURE] = HKSampleType.quantityType(forIdentifier: .uvExposure)!
             
             // Nutrition
             dataQuantityTypesDict[DIETARY_CARBS_CONSUMED] = HKSampleType.quantityType(forIdentifier: .dietaryCarbohydrates)!
@@ -1600,8 +1616,6 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataQuantityTypesDict[DISTANCE_SWIMMING] = HKQuantityType.quantityType(forIdentifier: .distanceSwimming)!
             dataQuantityTypesDict[DISTANCE_CYCLING] = HKQuantityType.quantityType(forIdentifier: .distanceCycling)!
             dataQuantityTypesDict[FLIGHTS_CLIMBED] = HKQuantityType.quantityType(forIdentifier: .flightsClimbed)!
-            
-            healthDataQuantityTypes = Array(dataQuantityTypesDict.values)
         }
         
         // Set up heart rate data types specific to the apple watch, requires iOS 12
@@ -1647,10 +1661,15 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         if #available(iOS 16.0, *){
             dataTypesDict[WRIST_TEMPERATURE] = HKSampleType.quantityType(forIdentifier: .appleSleepingWristTemperature)!
         }
-        
+        if #available(iOS 17.0, *){
+           dataTypesDict[TIME_IN_DAY_LIGHT] = HKSampleType.quantityType(forIdentifier: .timeInDaylight)!
+           dataQuantityTypesDict[TIME_IN_DAY_LIGHT] = HKSampleType.quantityType(forIdentifier: .timeInDaylight)!
+        }
+        healthDataQuantityTypes = Array(dataQuantityTypesDict.values)
         // Concatenate heart events, headache and health data types (both may be empty)
         allDataTypes = Set(heartRateEventTypes + healthDataTypes)
         allDataTypes = allDataTypes.union(headacheType)
+
     }
     
     func getWorkoutType(type: HKWorkoutActivityType) -> String {

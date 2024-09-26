@@ -59,7 +59,7 @@ const List<HealthDataType> dataTypesIOS = [
   HealthDataType.MENSTRUATION_FLOW,
 
   HealthDataType.VO2MAX,
-  HealthDataType.UV_EXPOSURE,
+  HealthDataType.TIME_IN_DAY_LIGHT,
 ];
 
 /// List of data types available on Android.

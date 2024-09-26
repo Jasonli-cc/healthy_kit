@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:health/health.dart';
 import 'package:health_example/util.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:carp_serializable/carp_serializable.dart';
 
 void main() => runApp(HealthApp());
 
@@ -111,8 +110,9 @@ class _HealthAppState extends State<HealthApp> {
     });
   }
 
-  void fetchActivityRingData() {
-    Health().getActivityRingData();
+  void fetchActivityRingData() async {
+    final res = await Health().getActivityRingData(DateTime.now(), DateTime.now());
+    print(res);
   }
 
   /// Fetch data points from the health plugin and show them in the app.
@@ -129,10 +129,16 @@ class _HealthAppState extends State<HealthApp> {
     try {
       // fetch health data
       List<HealthDataPoint> healthData = await Health().getHealthDataFromTypes(
-        types: [],
-        startTime: DateTime(now.year, now.month, now.day),
+        types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN],
+        startTime: now.subtract(const Duration(days: 100)),
         endTime: now,
+        limit: 1,
       );
+
+      print(healthData.firstOrNull?.toJson());
+      print(healthData.lastOrNull?.toJson());
+
+      print(healthData.first.dateTo.difference(healthData.first.dateFrom).inMilliseconds);
 
       debugPrint('Total number of data points: ${healthData.length}. '
           '${healthData.length > 100 ? 'Only showing the first 100.' : ''}');
@@ -376,18 +382,16 @@ class _HealthAppState extends State<HealthApp> {
                       child: Text("Fetch Data", style: TextStyle(color: Colors.white)),
                       style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
                   TextButton(
-                      onPressed: (){
+                      onPressed: () {
                         fetchActivityRingData();
                       },
                       child: Text("Activity Ring", style: TextStyle(color: Colors.white)),
                       style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
                   TextButton(
-                      onPressed: addData,
-                      child: Text("Add Data", style: TextStyle(color: Colors.white)),
-                      style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
-                  TextButton(
-                      onPressed: deleteData,
-                      child: Text("Delete Data", style: TextStyle(color: Colors.white)),
+                      onPressed: () {
+                        fetchWorkData();
+                      },
+                      child: Text("Workout", style: TextStyle(color: Colors.white)),
                       style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
                   TextButton(
                       onPressed: fetchStepData,
@@ -523,6 +527,6 @@ class _HealthAppState extends State<HealthApp> {
         AppState.PERMISSIONS_REVOKED => _permissionsRevoked,
         AppState.PERMISSIONS_NOT_REVOKED => _permissionsNotRevoked,
       };
+
+  void fetchWorkData() async {}
 }
-
-

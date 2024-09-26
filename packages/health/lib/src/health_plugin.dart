@@ -71,8 +71,16 @@ class Health {
   /// Check if a given data type is available on the platform
   bool isDataTypeAvailable(HealthDataType dataType) => Platform.isAndroid ? dataTypeKeysAndroid.contains(dataType) : dataTypeKeysIOS.contains(dataType);
 
-  Future<void> getActivityRingData()async{
-    await _channel.invokeMethod('getActivityRingData');
+  Future<List<HealthActivitySummary>> getActivityRingData(DateTime start, DateTime end) async {
+    try {
+      final res =
+          await _channel.invokeMethod('getActivityRingData', {"start": DateFormat("yyyy-MM-dd").format(start), "end": DateFormat("yyyy-MM-dd").format(end)});
+      final list = res as List;
+      return list.map((e) => HealthActivitySummary.fromJson(Map.castFrom(e as Map))).toList();
+    } catch (e) {
+      print(e);
+      return [];
+    }
   }
 
   /// Determines if the health data [types] have been granted with the specified
@@ -760,17 +768,12 @@ class Health {
   }
 
   /// Fetch a list of health data points based on [types].
-  Future<List<HealthDataPoint>> getHealthDataFromTypes({
-    required List<HealthDataType> types,
-    required DateTime startTime,
-    required DateTime endTime,
-    bool includeManualEntry = true,
-    int? limit
-  }) async {
+  Future<List<HealthDataPoint>> getHealthDataFromTypes(
+      {required List<HealthDataType> types, required DateTime startTime, required DateTime endTime, bool includeManualEntry = true, int? limit}) async {
     List<HealthDataPoint> dataPoints = [];
 
     for (var type in types) {
-      final result = await _prepareQuery(startTime, endTime, type, includeManualEntry,limit: limit);
+      final result = await _prepareQuery(startTime, endTime, type, includeManualEntry, limit: limit);
       dataPoints.addAll(result);
     }
 
@@ -829,7 +832,7 @@ class Health {
     if (dataType == HealthDataType.BODY_MASS_INDEX && Platform.isAndroid) {
       return _computeAndroidBMI(startTime, endTime, includeManualEntry);
     }
-    return await _dataQuery(startTime, endTime, dataType, includeManualEntry,limit);
+    return await _dataQuery(startTime, endTime, dataType, includeManualEntry, limit);
   }
 
   /// Prepares an interval query, i.e. checks if the types are available, etc.
