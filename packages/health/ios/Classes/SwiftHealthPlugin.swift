@@ -144,6 +144,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     
     let EXERCISE_TIME = "EXERCISE_TIME"
     let WORKOUT = "WORKOUT"
+    let WORKOUT_ROUTE = "WORKOUT_ROUTE"
     let HEADACHE_UNSPECIFIED = "HEADACHE_UNSPECIFIED"
     let HEADACHE_NOT_PRESENT = "HEADACHE_NOT_PRESENT"
     let HEADACHE_MILD = "HEADACHE_MILD"
@@ -214,6 +215,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let MILLIGRAM_PER_DECILITER = "MILLIGRAM_PER_DECILITER"
     let UNKNOWN_UNIT = "UNKNOWN_UNIT"
     let NO_UNIT = "NO_UNIT"
+    let MET = "MET"
     
     struct PluginError: Error {
         let message: String
@@ -292,12 +294,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         else if call.method.elementsEqual("hasPermissions") {
             try! hasPermissions(call: call, result: result)
         }
-        
         /// Handle delete data
         else if call.method.elementsEqual("delete") {
             try! delete(call: call, result: result)
         }
-        
         /// Disconnect
         else if (call.method.elementsEqual("disconnect")){
             // Do nothing.
@@ -306,8 +306,104 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
           try! self.getActivityRingData(call: call, result: result)
         }else if(call.method.elementsEqual("getHeartBeatData")){
            try! self.getHeartBeatData(call: call, result: result)
+        }else if(call.method.elementsEqual("getWorkoutRoute")){
+            try! self.getWorkoutRoute(call: call, result: result)
         }
     }
+
+    func getWorkoutRoute(call: FlutterMethodCall, result: @escaping FlutterResult){
+        let calendar = NSCalendar.current
+        let arguments = call.arguments as? NSDictionary
+        var startTime = arguments?["start"] as? NSNumber ?? 0
+        var endTime = arguments?["end"] as? NSNumber ?? 0
+        let startDate = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
+        let endDate = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
+        var workoutId = UUID.init(uuidString: arguments?["workoutId"] as? String ?? "")
+        if(workoutId == nil){
+            result(nil)
+            return
+        }
+        var predicate = HKQuery.predicateForObject(with: workoutId!)
+
+        let workoutQuery = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: predicate, limit: 1, sortDescriptors: nil) { query, samples, error in
+            guard let workout = samples?.first as? HKWorkout else {
+                print("No workout found")
+                return
+            }
+            print(workout)
+            let workoutQueryPredicate = HKQuery.predicateForObjects(from: workout)
+
+            let routeQuery = HKAnchoredObjectQuery(type: HKSeriesType.workoutRoute(), predicate: workoutQueryPredicate, anchor: nil, limit: HKObjectQueryNoLimit) { (query, samples, deletedObjects, anchor, error) in
+                guard error == nil else {
+                    // Handle any errors here.
+                    fatalError("The initial query failed.")
+                    return
+                }
+                print(samples)
+                guard let route = samples?.first as? HKWorkoutRoute else{
+                    return
+                }
+                let query = HKWorkoutRouteQuery(route: route) { (query, locationsOrNil, done, errorOrNil) in
+                    if let error = errorOrNil {
+                        return
+                    }
+                    guard let locations = locationsOrNil else {
+                        fatalError("*** Invalid State: This can only fail if there was an error. ***")
+                    }
+                    if done {
+                        let dictionaries = locations.map { location -> NSDictionary in
+                            return [
+                                "lat": location.coordinate.latitude,
+                                "lon": location.coordinate.longitude,
+                                "alt": location.altitude,
+                                "speed": location.speed,
+                                "timestamp": Int(location.timestamp.timeIntervalSince1970 * 1000),
+                            ]
+                        }
+                        DispatchQueue.main.async {
+                            result(dictionaries)
+                        }
+                    }
+                }
+                self.healthStore.execute(query)
+            }
+            self.healthStore.execute(routeQuery)
+        }
+        healthStore.execute(workoutQuery)
+    }
+
+    func processRoute(_ route: HKWorkoutRoute) {
+        var maxSpeed: Double = 0.0
+
+        let routeQuery = HKWorkoutRouteQuery(route: route) { query, locations, done, error in
+            guard let locations = locations else {
+                print("No locations found")
+                return
+            }
+
+            for i in 1..<locations.count {
+                let currentLocation = locations[i]
+                let previousLocation = locations[i - 1]
+
+                let distance = currentLocation.distance(from: previousLocation) // meters
+                let time = currentLocation.timestamp.timeIntervalSince(previousLocation.timestamp) // seconds
+
+                if time > 0 {
+                    let speed = distance / time // m/s
+                    maxSpeed = max(maxSpeed, speed)
+                }
+            }
+
+            if done {
+                let maxSpeedKmh = maxSpeed * 3.6 // 转换为 km/h
+                print("Max speed: \(maxSpeedKmh) km/h")
+                print(locations)
+            }
+        }
+
+        healthStore.execute(routeQuery)
+    }
+
     
     func checkIfHealthDataAvailable(call: FlutterMethodCall, result: @escaping FlutterResult) {
         result(HKHealthStore.isHealthDataAvailable())
@@ -334,7 +430,20 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         }
         
         for (index, type) in types.enumerated() {
-            let sampleType = dataTypeLookUp(key: type)
+            var sampleType:HKObjectType
+            if(type == WORKOUT_ROUTE){
+
+            }
+            switch(type){
+                case WORKOUT_ROUTE:
+                    sampleType = HKSeriesType.workoutRoute()
+                case ACTIVITY_RING:
+                    sampleType = HKActivitySummaryType.activitySummaryType()
+                case HEART_BEAT:
+                    sampleType = HKSeriesType.heartbeat()
+                default:
+                    sampleType = dataTypeLookUp(key: type)
+            }
             let success = hasPermission(type: sampleType, access: permissions[index])
             if success == nil || success == false {
                 result(success)
@@ -370,19 +479,11 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     }
 
     func getHeartBeatData(call: FlutterMethodCall, result: @escaping FlutterResult)throws{
-        let calendar = NSCalendar.current
-        let dateFormatter = DateFormatter()
-        // 设置日期格式，匹配字符串格式 "yyyy-MM-dd"
-        dateFormatter.dateFormat = "yyyy-MM-dd mm:HH:ss"
         let arguments = call.arguments as? NSDictionary
-        var startDate:Date? = dateFormatter.date(from: arguments?["start"] as? String ?? "")
-        var endDate:Date? = dateFormatter.date(from: arguments?["end"] as? String ?? "")
-
-        guard startDate != nil && endDate != nil else{
-            result([])
-            return
-        }
-
+        var startTime = arguments?["start"] as? NSNumber ?? 0
+        var endTime = arguments?["end"] as? NSNumber ?? 0
+        let startDate = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
+        let endDate = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
 
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate,
                                                        ascending: true)
@@ -435,8 +536,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                             if(numberOfSamplesProcessed == samples.count)
                             {
                                 result([
-                                    "start": dateFormatter.string(from:startDate!),
-                                    "end": dateFormatter.string(from:endDate!),
+                                    "start": Int(startDate.timeIntervalSince1970 * 1000),
+                                    "end": Int(endDate.timeIntervalSince1970 * 1000),
                                     "SDNN": heartBeatSamples.sdnn(),
                                     "RMSSD": heartBeatSamples.rmssd(),
                                 ])
@@ -453,25 +554,19 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
 
     func getActivityRingData(call: FlutterMethodCall, result: @escaping FlutterResult)throws{
         let calendar = NSCalendar.current
-        let dateFormatter = DateFormatter()
-        // 设置日期格式，匹配字符串格式 "yyyy-MM-dd"
-        dateFormatter.dateFormat = "yyyy-MM-dd"
         let arguments = call.arguments as? NSDictionary
-        var startDate:Date? = dateFormatter.date(from: arguments?["start"] as? String ?? "")
-        var endDate:Date? = dateFormatter.date(from: arguments?["end"] as? String ?? "")
-
-        guard startDate != nil && endDate != nil else{
-            result([])
-            return
-        }
+        let startTime = (arguments?["start"] as? NSNumber) ?? 0
+        let endTime = (arguments?["end"] as? NSNumber) ?? 0
+        let startDate = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
+        let endDate = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
 
         let units: Set<Calendar.Component> = [.day, .month, .year, .era]
 
-        var startDateComponents = calendar.dateComponents(units, from: startDate!)
+        var startDateComponents = calendar.dateComponents(units, from: startDate)
         startDateComponents.calendar = calendar
 
 
-        var endDateComponents = calendar.dateComponents(units, from: endDate!)
+        var endDateComponents = calendar.dateComponents(units, from: endDate)
         endDateComponents.calendar = calendar
         let summariesWithinRange = HKQuery.predicate(forActivitySummariesBetweenStart: startDateComponents,
                                                      end: endDateComponents)
@@ -490,7 +585,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                    "appleExerciseTimeGoal": summary.appleExerciseTimeGoal.doubleValue(for: .minute()),
                    "appleStandHours": summary.appleStandHours.doubleValue(for: .count()),
                    "appleStandHoursGoal": summary.appleStandHoursGoal.doubleValue(for: .count()),
-                   "date": dateFormatter.string(from: summary.dateComponents(for: Calendar.current).date!)
+                   "date": Int(summary.dateComponents(for: Calendar.current).date!.timeIntervalSince1970 * 1000),
                 ]
             }
             result(dictionaries)
@@ -512,7 +607,9 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
 //        typesToRead.insert(HKSeriesType.heartbeat())
         var typesToWrite = Set<HKSampleType>()
         for (index, key) in types.enumerated() {
-           if(key == HEART_BEAT){
+           if(key == WORKOUT_ROUTE){
+               typesToRead.insert(HKSeriesType.workoutRoute())
+           }else if(key == HEART_BEAT){
                typesToRead.insert(HKSeriesType.heartbeat())
            }
            else if(key == ACTIVITY_RING){
@@ -956,7 +1053,6 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         default:
             break
         }
-        
         var predicate = HKQuery.predicateForSamples(
             withStart: dateFrom, end: dateTo, options: .strictStartDate)
         if (!includeManualEntry) {
@@ -1054,15 +1150,25 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                 DispatchQueue.main.async {
                     result(categories)
                 }
-                
             case let (samplesWorkout as [HKWorkout]) as Any:
-                
                 let dictionaries = samplesWorkout.map { sample -> NSDictionary in
+
+                    print(sample)
+                    let elevationAscended:HKQuantity? = sample.metadata?["HKElevationAscended"] as? HKQuantity;
+                    let met:HKQuantity? = sample.metadata?["HKAverageMETs"] as? HKQuantity;
+                    let temperature:HKQuantity? = sample.metadata?["HKWeatherTemperature"] as? HKQuantity;
+                    let humidity:HKQuantity? = sample.metadata?["HKWeatherHumidity"] as? HKQuantity;
+                    let indoor:Bool = sample.metadata?["HKIndoorWorkout"] as? Int == 1
                     return [
                         "uuid": "\(sample.uuid)",
                         "workoutActivityType": workoutActivityTypeMap.first(where: {
                             $0.value == sample.workoutActivityType
                         })?.key,
+                        "elevationAscended": elevationAscended?.doubleValue(for: HKUnit.meter()),
+                        "met": met?.doubleValue(for: unitDict[MET]!),
+                        "temperature": temperature?.doubleValue(for: HKUnit.degreeCelsius()),
+                        "humidity": humidity?.doubleValue(for: HKUnit.percent()),
+                        "inDoor": indoor,
                         "totalEnergyBurned": sample.totalEnergyBurned?.doubleValue(for: HKUnit.kilocalorie()),
                         "totalEnergyBurnedUnit": "KILOCALORIE",
                         "totalDistance": sample.totalDistance?.doubleValue(for: HKUnit.meter()),
@@ -1431,6 +1537,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
 
         unitDict[VO2MAX] = HKUnit.init(from: "ml/kg").unitDivided(by: .minute())
         unitDict[TIME_IN_DAY_LIGHT] = HKUnit.minute()
+        unitDict[MET] = HKUnit.kilocalorie().unitDivided(by: HKUnit.init(from: "hr")).unitDivided(by: HKUnit.init(from: "kg"))
 
         // Initialize workout types
         workoutActivityTypeMap["ARCHERY"] = .archery
@@ -1917,6 +2024,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             return "other"
         }
     }
+
+
 }
 
 
@@ -1925,9 +2034,6 @@ class HeartBeatSamples
     var rrIntervals: [Double] = []
     func addSample(timestamp: Date, timeSinceLastBeat: Double, rrInterval: Double, beatsPerMinute: Double, precededByGap: Bool)
     {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        let dateStr = dateFormatter.string(from: timestamp)
         rrIntervals.append(rrInterval)
     }
 

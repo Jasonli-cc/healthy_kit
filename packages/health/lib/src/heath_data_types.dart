@@ -100,6 +100,8 @@ enum HealthDataType {
   WRIST_TEMPERATURE,
   // 健身圆环
   ACTIVITY_RING,
+  // 路线
+  WORKOUT_ROUTE,
   // HealthKit Characteristics
   GENDER,
   BIRTH_DATE,
@@ -220,6 +222,7 @@ const List<HealthDataType> dataTypeKeysIOS = [
   HealthDataType.VO2MAX,
   HealthDataType.TIME_IN_DAY_LIGHT,
   HealthDataType.WRIST_TEMPERATURE,
+  HealthDataType.WORKOUT_ROUTE,
 ];
 
 /// List of data types available on Android

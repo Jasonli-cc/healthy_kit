@@ -5,6 +5,8 @@ import 'dart:collection';
 import 'dart:io' show Platform;
 
 import 'package:carp_serializable/carp_serializable.dart';
+import 'package:health/src/hrv_data.dart';
+import 'package:health/src/workout_route_data.dart';
 import 'package:intl/intl.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:device_info_plus/device_info_plus.dart';

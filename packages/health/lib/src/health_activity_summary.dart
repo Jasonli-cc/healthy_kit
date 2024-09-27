@@ -23,7 +23,7 @@ class HealthActivitySummary {
       appleStandHoursGoal: jsonData["appleStandHoursGoal"] as double,
       activeEnergyBurned: jsonData["activeEnergyBurned"] as double,
       appleExerciseTime: jsonData["appleExerciseTime"] as double,
-      date: DateTime.parse(jsonData['date'] as String),
+      date: DateTime.fromMillisecondsSinceEpoch(jsonData['date'] as int? ?? 0),
     );
   }
 }

@@ -62,6 +62,7 @@ const List<HealthDataType> dataTypesIOS = [
   HealthDataType.TIME_IN_DAY_LIGHT,
   HealthDataType.ACTIVITY_RING,
   HealthDataType.HEART_BEAT,
+  HealthDataType.WORKOUT_ROUTE,
 ];
 
 /// List of data types available on Android.

@@ -114,15 +114,24 @@ class _HealthAppState extends State<HealthApp> {
 
   void fetchActivityRingData() async {
     final res = await Health().getActivityRingData(DateTime.now(), DateTime.now());
+    print(res.firstOrNull?.date);
   }
 
   fetchHeartBeat() async {
     final now = DateTime.now();
-    final hrvList = await Health()
-        .getHealthDataFromTypes(types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN], startTime: DateTime(now.year, now.month, now.day), endTime: now, limit: 1);
-    if (hrvList.isEmpty) return;
-    print(hrvList.first.toJson());
-    await Health().getHeartBeatData(hrvList.first.dateFrom, hrvList.first.dateTo);
+    final res = await Health().getHRVData(DateTime(now.year, now.month, now.day), now);
+    print(res.map((e) => e.rmssd));
+  }
+
+  fetchActivityRoute() async {
+    final workouts =
+        await Health().getHealthDataFromTypes(types: [
+          HealthDataType.WORKOUT
+        ], startTime: DateTime.now().subtract(const Duration(days: 100)), endTime: DateTime.now(), limit: 1);
+    if(workouts.isEmpty) return;
+    final workout = workouts.first.value as WorkoutHealthValue;
+    final routes = await Health().getWorkoutRouteData(workout.uuid ?? '',workout.dateFrom.subtract(const Duration(seconds: 5)), workout.dateTo.add(const Duration(seconds: 5)));
+    print(routes);
   }
 
   /// Fetch data points from the health plugin and show them in the app.
@@ -138,19 +147,13 @@ class _HealthAppState extends State<HealthApp> {
 
     try {
       // fetch health data
-      List<HealthDataPoint> healthData = await Health()
-          .getHealthDataFromTypes(types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN], startTime: DateTime(now.year, now.month, now.day), endTime: now);
+      List<HealthDataPoint> healthData = await Health().getHealthDataFromTypes(
+          types: [HealthDataType.WORKOUT], startTime: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 100)), endTime: now, limit: 1);
       debugPrint('Total number of data points: ${healthData.length}. '
           '${healthData.length > 100 ? 'Only showing the first 100.' : ''}');
-      final List<num> values = healthData.map((e) {
-        return (e.value as NumericHealthValue).numericValue;
-      }).toList();
-      List<num> vals = [];
-      for (int i = 1; i < values.length; i++) {
-        num v = values[i] - values[i - 1];
-        vals.add(v);
-      }
-      print(vals);
+
+      print(healthData.first.toJson());
+
       _healthDataList.addAll((healthData.length < 100) ? healthData : healthData.sublist(0, 100));
     } catch (error) {
       debugPrint("Exception in getHealthDataFromTypes: $error");
@@ -399,6 +402,12 @@ class _HealthAppState extends State<HealthApp> {
                         fetchHeartBeat();
                       },
                       child: Text("HeartBeat", style: TextStyle(color: Colors.white)),
+                      style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
+                  TextButton(
+                      onPressed: () {
+                        fetchActivityRoute();
+                      },
+                      child: Text("ActivityRoute", style: TextStyle(color: Colors.white)),
                       style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
                   TextButton(
                       onPressed: fetchStepData,

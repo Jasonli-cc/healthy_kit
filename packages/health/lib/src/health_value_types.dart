@@ -7,8 +7,7 @@ class HealthValue extends Serializable {
 
   @override
   Function get fromJsonFunction => _$HealthValueFromJson;
-  factory HealthValue.fromJson(Map<String, dynamic> json) =>
-      FromJsonFactory().fromJson(json) as HealthValue;
+  factory HealthValue.fromJson(Map<String, dynamic> json) => FromJsonFactory().fromJson(json) as HealthValue;
   @override
   Map<String, dynamic> toJson() => _$HealthValueToJson(this);
 }
@@ -26,22 +25,19 @@ class NumericHealthValue extends HealthValue {
   NumericHealthValue({required this.numericValue});
 
   /// Create a [NumericHealthValue] based on a health data point from native data format.
-  factory NumericHealthValue.fromHealthDataPoint(dynamic dataPoint) =>
-      NumericHealthValue(numericValue: dataPoint['value'] as num? ?? 0);
+  factory NumericHealthValue.fromHealthDataPoint(dynamic dataPoint) => NumericHealthValue(numericValue: dataPoint['value'] as num? ?? 0);
 
   @override
   String toString() => '$runtimeType - numericValue: $numericValue';
 
   @override
   Function get fromJsonFunction => _$NumericHealthValueFromJson;
-  factory NumericHealthValue.fromJson(Map<String, dynamic> json) =>
-      FromJsonFactory().fromJson(json) as NumericHealthValue;
+  factory NumericHealthValue.fromJson(Map<String, dynamic> json) => FromJsonFactory().fromJson(json) as NumericHealthValue;
   @override
   Map<String, dynamic> toJson() => _$NumericHealthValueToJson(this);
 
   @override
-  bool operator ==(Object other) =>
-      other is NumericHealthValue && numericValue == other.numericValue;
+  bool operator ==(Object other) => other is NumericHealthValue && numericValue == other.numericValue;
 
   @override
   int get hashCode => numericValue.hashCode;
@@ -71,13 +67,10 @@ class AudiogramHealthValue extends HealthValue {
   });
 
   /// Create a [AudiogramHealthValue] based on a health data point from native data format.
-  factory AudiogramHealthValue.fromHealthDataPoint(dynamic dataPoint) =>
-      AudiogramHealthValue(
-          frequencies: List<num>.from(dataPoint['frequencies'] as List),
-          leftEarSensitivities:
-              List<num>.from(dataPoint['leftEarSensitivities'] as List),
-          rightEarSensitivities:
-              List<num>.from(dataPoint['rightEarSensitivities'] as List));
+  factory AudiogramHealthValue.fromHealthDataPoint(dynamic dataPoint) => AudiogramHealthValue(
+      frequencies: List<num>.from(dataPoint['frequencies'] as List),
+      leftEarSensitivities: List<num>.from(dataPoint['leftEarSensitivities'] as List),
+      rightEarSensitivities: List<num>.from(dataPoint['rightEarSensitivities'] as List));
 
   @override
   String toString() => """$runtimeType - frequencies: ${frequencies.toString()},
@@ -86,8 +79,7 @@ class AudiogramHealthValue extends HealthValue {
 
   @override
   Function get fromJsonFunction => _$AudiogramHealthValueFromJson;
-  factory AudiogramHealthValue.fromJson(Map<String, dynamic> json) =>
-      FromJsonFactory().fromJson(json) as AudiogramHealthValue;
+  factory AudiogramHealthValue.fromJson(Map<String, dynamic> json) => FromJsonFactory().fromJson(json) as AudiogramHealthValue;
   @override
   Map<String, dynamic> toJson() => _$AudiogramHealthValueToJson(this);
 
@@ -99,8 +91,7 @@ class AudiogramHealthValue extends HealthValue {
       listEquals(rightEarSensitivities, other.rightEarSensitivities);
 
   @override
-  int get hashCode =>
-      Object.hash(frequencies, leftEarSensitivities, rightEarSensitivities);
+  int get hashCode => Object.hash(frequencies, leftEarSensitivities, rightEarSensitivities);
 }
 
 /// A [HealthValue] object for workouts
@@ -113,6 +104,9 @@ class AudiogramHealthValue extends HealthValue {
 /// * [totalDistanceUnit] - the unit of the total distance
 @JsonSerializable(fieldRename: FieldRename.snake, includeIfNull: false)
 class WorkoutHealthValue extends HealthValue {
+
+  String? uuid;
+
   /// The type of the workout.
   HealthWorkoutActivityType workoutActivityType;
 
@@ -140,60 +134,83 @@ class WorkoutHealthValue extends HealthValue {
   /// Might not be available for all workouts.
   HealthDataUnit? totalStepsUnit;
 
-  WorkoutHealthValue(
-      {required this.workoutActivityType,
-      this.totalEnergyBurned,
-      this.totalEnergyBurnedUnit,
-      this.totalDistance,
-      this.totalDistanceUnit,
-      this.totalSteps,
-      this.totalStepsUnit});
+  // met
+  double? met;
+  // 爬升
+  double? elevationAscended;
+  // 温度
+  double? temperature;
+  // 湿度
+  double? humidity;
+  // 是否是室内运动
+  bool? indoor;
+
+  DateTime dateFrom;
+  DateTime dateTo;
+
+  WorkoutHealthValue({
+    required this.workoutActivityType,
+    this.totalEnergyBurned,
+    required this.dateFrom,
+    required this.dateTo,
+     this.uuid,
+    this.totalEnergyBurnedUnit,
+    this.totalDistance,
+    this.totalDistanceUnit,
+    this.totalSteps,
+    this.totalStepsUnit,
+    this.met,
+    this.indoor,
+    this.elevationAscended,
+    this.humidity,
+    this.temperature,
+  });
 
   /// Create a [WorkoutHealthValue] based on a health data point from native data format.
-  factory WorkoutHealthValue.fromHealthDataPoint(dynamic dataPoint) =>
-      WorkoutHealthValue(
-          workoutActivityType: HealthWorkoutActivityType.values.firstWhere(
-            (element) => element.name == dataPoint['workoutActivityType'],
-            orElse: () => HealthWorkoutActivityType.OTHER,
-          ),
-          totalEnergyBurned: dataPoint['totalEnergyBurned'] != null
-              ? (dataPoint['totalEnergyBurned'] as num).toInt()
-              : null,
-          totalEnergyBurnedUnit: dataPoint['totalEnergyBurnedUnit'] != null
-              ? HealthDataUnit.values.firstWhere((element) =>
-                  element.name == dataPoint['totalEnergyBurnedUnit'])
-              : null,
-          totalDistance: dataPoint['totalDistance'] != null
-              ? (dataPoint['totalDistance'] as num).toInt()
-              : null,
-          totalDistanceUnit: dataPoint['totalDistanceUnit'] != null
-              ? HealthDataUnit.values.firstWhere(
-                  (element) => element.name == dataPoint['totalDistanceUnit'])
-              : null,
-          totalSteps: dataPoint['totalSteps'] != null
-              ? (dataPoint['totalSteps'] as num).toInt()
-              : null,
-          totalStepsUnit: dataPoint['totalStepsUnit'] != null
-              ? HealthDataUnit.values.firstWhere(
-                  (element) => element.name == dataPoint['totalStepsUnit'])
-              : null);
+  factory WorkoutHealthValue.fromHealthDataPoint(dynamic dataPoint) => WorkoutHealthValue(
+        uuid: dataPoint['uuid'] as String,
+        workoutActivityType: HealthWorkoutActivityType.values.firstWhere(
+          (element) => element.name == dataPoint['workoutActivityType'],
+          orElse: () => HealthWorkoutActivityType.OTHER,
+        ),
+        totalEnergyBurned: dataPoint['totalEnergyBurned'] != null ? (dataPoint['totalEnergyBurned'] as num).toInt() : null,
+        totalEnergyBurnedUnit: dataPoint['totalEnergyBurnedUnit'] != null
+            ? HealthDataUnit.values.firstWhere((element) => element.name == dataPoint['totalEnergyBurnedUnit'])
+            : null,
+        totalDistance: dataPoint['totalDistance'] != null ? (dataPoint['totalDistance'] as num).toInt() : null,
+        totalDistanceUnit:
+            dataPoint['totalDistanceUnit'] != null ? HealthDataUnit.values.firstWhere((element) => element.name == dataPoint['totalDistanceUnit']) : null,
+        totalSteps: dataPoint['totalSteps'] != null ? (dataPoint['totalSteps'] as num).toInt() : null,
+        totalStepsUnit: dataPoint['totalStepsUnit'] != null ? HealthDataUnit.values.firstWhere((element) => element.name == dataPoint['totalStepsUnit']) : null,
+        indoor: dataPoint['indoor'] == true,
+        met: dataPoint['met'] as double?,
+        elevationAscended: dataPoint['elevationAscended'] as double?,
+        humidity: dataPoint['humidity'] as double?,
+        temperature: dataPoint['temperature'] as double?,
+        dateFrom: DateTime.fromMillisecondsSinceEpoch(dataPoint['date_from'] as int? ?? 0),
+        dateTo: DateTime.fromMillisecondsSinceEpoch(dataPoint['date_to'] as int? ?? 0),
+      );
 
   @override
   Function get fromJsonFunction => _$WorkoutHealthValueFromJson;
-  factory WorkoutHealthValue.fromJson(Map<String, dynamic> json) =>
-      FromJsonFactory().fromJson(json) as WorkoutHealthValue;
+  factory WorkoutHealthValue.fromJson(Map<String, dynamic> json) => FromJsonFactory().fromJson(json) as WorkoutHealthValue;
   @override
   Map<String, dynamic> toJson() => _$WorkoutHealthValueToJson(this);
 
   @override
-  String toString() =>
-      """$runtimeType - workoutActivityType: ${workoutActivityType.name},
+  String toString() => """$runtimeType - workoutActivityType: ${workoutActivityType.name},
            totalEnergyBurned: $totalEnergyBurned,
            totalEnergyBurnedUnit: ${totalEnergyBurnedUnit?.name},
            totalDistance: $totalDistance,
            totalDistanceUnit: ${totalDistanceUnit?.name}
            totalSteps: $totalSteps,
-           totalStepsUnit: ${totalStepsUnit?.name}""";
+           totalStepsUnit: ${totalStepsUnit?.name},
+           met: $met,
+           elevationAscended: $elevationAscended,
+           temperature: $temperature,
+           humidity: $humidity,
+           indoor: $indoor,
+           """;
 
   @override
   bool operator ==(Object other) =>
@@ -207,14 +224,7 @@ class WorkoutHealthValue extends HealthValue {
       totalStepsUnit == other.totalStepsUnit;
 
   @override
-  int get hashCode => Object.hash(
-      workoutActivityType,
-      totalEnergyBurned,
-      totalEnergyBurnedUnit,
-      totalDistance,
-      totalDistanceUnit,
-      totalSteps,
-      totalStepsUnit);
+  int get hashCode => Object.hash(workoutActivityType, totalEnergyBurned, totalEnergyBurnedUnit, totalDistance, totalDistanceUnit, totalSteps, totalStepsUnit);
 }
 
 /// A [HealthValue] object for ECGs
@@ -247,22 +257,16 @@ class ElectrocardiogramHealthValue extends HealthValue {
 
   @override
   Function get fromJsonFunction => _$ElectrocardiogramHealthValueFromJson;
-  factory ElectrocardiogramHealthValue.fromJson(Map<String, dynamic> json) =>
-      FromJsonFactory().fromJson(json) as ElectrocardiogramHealthValue;
+  factory ElectrocardiogramHealthValue.fromJson(Map<String, dynamic> json) => FromJsonFactory().fromJson(json) as ElectrocardiogramHealthValue;
   @override
   Map<String, dynamic> toJson() => _$ElectrocardiogramHealthValueToJson(this);
 
   /// Create a [ElectrocardiogramHealthValue] based on a health data point from native data format.
-  factory ElectrocardiogramHealthValue.fromHealthDataPoint(dynamic dataPoint) =>
-      ElectrocardiogramHealthValue(
-        voltageValues: (dataPoint['voltageValues'] as List)
-            .map((voltageValue) =>
-                ElectrocardiogramVoltageValue.fromHealthDataPoint(voltageValue))
-            .toList(),
+  factory ElectrocardiogramHealthValue.fromHealthDataPoint(dynamic dataPoint) => ElectrocardiogramHealthValue(
+        voltageValues: (dataPoint['voltageValues'] as List).map((voltageValue) => ElectrocardiogramVoltageValue.fromHealthDataPoint(voltageValue)).toList(),
         averageHeartRate: dataPoint['averageHeartRate'] as num?,
         samplingFrequency: dataPoint['samplingFrequency'] as double?,
-        classification: ElectrocardiogramClassification.values
-            .firstWhere((c) => c.value == dataPoint['classification']),
+        classification: ElectrocardiogramClassification.values.firstWhere((c) => c.value == dataPoint['classification']),
       );
 
   @override
@@ -274,12 +278,10 @@ class ElectrocardiogramHealthValue extends HealthValue {
       classification == other.classification;
 
   @override
-  int get hashCode => Object.hash(
-      voltageValues, averageHeartRate, samplingFrequency, classification);
+  int get hashCode => Object.hash(voltageValues, averageHeartRate, samplingFrequency, classification);
 
   @override
-  String toString() =>
-      '$runtimeType - ${voltageValues.length} values, $averageHeartRate BPM, $samplingFrequency HZ, $classification';
+  String toString() => '$runtimeType - ${voltageValues.length} values, $averageHeartRate BPM, $samplingFrequency HZ, $classification';
 }
 
 /// Single voltage value belonging to a [ElectrocardiogramHealthValue]
@@ -297,24 +299,17 @@ class ElectrocardiogramVoltageValue extends HealthValue {
   });
 
   /// Create a [ElectrocardiogramVoltageValue] based on a health data point from native data format.
-  factory ElectrocardiogramVoltageValue.fromHealthDataPoint(
-          dynamic dataPoint) =>
-      ElectrocardiogramVoltageValue(
-          voltage: dataPoint['voltage'] as num,
-          timeSinceSampleStart: dataPoint['timeSinceSampleStart'] as num);
+  factory ElectrocardiogramVoltageValue.fromHealthDataPoint(dynamic dataPoint) =>
+      ElectrocardiogramVoltageValue(voltage: dataPoint['voltage'] as num, timeSinceSampleStart: dataPoint['timeSinceSampleStart'] as num);
 
   @override
   Function get fromJsonFunction => _$ElectrocardiogramVoltageValueFromJson;
-  factory ElectrocardiogramVoltageValue.fromJson(Map<String, dynamic> json) =>
-      FromJsonFactory().fromJson(json) as ElectrocardiogramVoltageValue;
+  factory ElectrocardiogramVoltageValue.fromJson(Map<String, dynamic> json) => FromJsonFactory().fromJson(json) as ElectrocardiogramVoltageValue;
   @override
   Map<String, dynamic> toJson() => _$ElectrocardiogramVoltageValueToJson(this);
 
   @override
-  bool operator ==(Object other) =>
-      other is ElectrocardiogramVoltageValue &&
-      voltage == other.voltage &&
-      timeSinceSampleStart == other.timeSinceSampleStart;
+  bool operator ==(Object other) => other is ElectrocardiogramVoltageValue && voltage == other.voltage && timeSinceSampleStart == other.timeSinceSampleStart;
 
   @override
   int get hashCode => Object.hash(voltage, timeSinceSampleStart);
@@ -340,13 +335,8 @@ class InsulinDeliveryHealthValue extends HealthValue {
   factory InsulinDeliveryHealthValue.fromHealthDataPoint(dynamic dataPoint) {
     final units = dataPoint['value'] as num;
 
-    final metadata = dataPoint['metadata'] == null
-        ? null
-        : Map<String, dynamic>.from(dataPoint['metadata'] as Map);
-    final reasonIndex =
-        metadata == null || !metadata.containsKey('HKInsulinDeliveryReason')
-            ? 0
-            : metadata['HKInsulinDeliveryReason'] as double;
+    final metadata = dataPoint['metadata'] == null ? null : Map<String, dynamic>.from(dataPoint['metadata'] as Map);
+    final reasonIndex = metadata == null || !metadata.containsKey('HKInsulinDeliveryReason') ? 0 : metadata['HKInsulinDeliveryReason'] as double;
     final reason = InsulinDeliveryReason.values[reasonIndex.toInt()];
 
     return InsulinDeliveryHealthValue(units: units.toDouble(), reason: reason);
@@ -354,16 +344,12 @@ class InsulinDeliveryHealthValue extends HealthValue {
 
   @override
   Function get fromJsonFunction => _$InsulinDeliveryHealthValueFromJson;
-  factory InsulinDeliveryHealthValue.fromJson(Map<String, dynamic> json) =>
-      FromJsonFactory().fromJson(json) as InsulinDeliveryHealthValue;
+  factory InsulinDeliveryHealthValue.fromJson(Map<String, dynamic> json) => FromJsonFactory().fromJson(json) as InsulinDeliveryHealthValue;
   @override
   Map<String, dynamic> toJson() => _$InsulinDeliveryHealthValueToJson(this);
 
   @override
-  bool operator ==(Object other) =>
-      other is InsulinDeliveryHealthValue &&
-      units == other.units &&
-      reason == other.reason;
+  bool operator ==(Object other) => other is InsulinDeliveryHealthValue && units == other.units && reason == other.reason;
 
   @override
   int get hashCode => Object.hash(units, reason);
@@ -603,8 +589,7 @@ class NutritionHealthValue extends HealthValue {
 
   @override
   Function get fromJsonFunction => _$NutritionHealthValueFromJson;
-  factory NutritionHealthValue.fromJson(Map<String, dynamic> json) =>
-      FromJsonFactory().fromJson(json) as NutritionHealthValue;
+  factory NutritionHealthValue.fromJson(Map<String, dynamic> json) => FromJsonFactory().fromJson(json) as NutritionHealthValue;
   @override
   Map<String, dynamic> toJson() => _$NutritionHealthValueToJson(this);
 
@@ -614,9 +599,8 @@ class NutritionHealthValue extends HealthValue {
   factory NutritionHealthValue.fromHealthDataPoint(dynamic dataPoint) {
     dataPoint = dataPoint as Map<Object?, Object?>;
     // where key is not null
-    final Map<String, Object?> dataPointMap = Map.fromEntries(dataPoint.entries
-        .where((entry) => entry.key != null)
-        .map((entry) => MapEntry(entry.key as String, entry.value)));
+    final Map<String, Object?> dataPointMap =
+        Map.fromEntries(dataPoint.entries.where((entry) => entry.key != null).map((entry) => MapEntry(entry.key as String, entry.value)));
     return _$NutritionHealthValueFromJson(dataPointMap);
   }
 
@@ -840,8 +824,7 @@ class MenstruationFlowHealthValue extends HealthValue {
   });
 
   @override
-  String toString() =>
-      "flow: ${flow?.name}, startOfCycle: $isStartOfCycle, wasUserEntered: $wasUserEntered, dateTime: $dateTime";
+  String toString() => "flow: ${flow?.name}, startOfCycle: $isStartOfCycle, wasUserEntered: $wasUserEntered, dateTime: $dateTime";
 
   factory MenstruationFlowHealthValue.fromHealthDataPoint(dynamic dataPoint) {
     // Parse flow value safely
@@ -855,24 +838,16 @@ class MenstruationFlowHealthValue extends HealthValue {
 
     return MenstruationFlowHealthValue(
       flow: menstrualFlow,
-      isStartOfCycle:
-          dataPoint['metadata']?.containsKey('HKMenstrualCycleStart') == true
-              ? dataPoint['metadata']['HKMenstrualCycleStart'] == 1.0
-              : null,
-      wasUserEntered:
-          dataPoint['metadata']?.containsKey('HKWasUserEntered') == true
-              ? dataPoint['metadata']['HKWasUserEntered'] == 1.0
-              : null,
-      dateTime:
-          DateTime.fromMillisecondsSinceEpoch(dataPoint['date_from'] as int),
+      isStartOfCycle: dataPoint['metadata']?.containsKey('HKMenstrualCycleStart') == true ? dataPoint['metadata']['HKMenstrualCycleStart'] == 1.0 : null,
+      wasUserEntered: dataPoint['metadata']?.containsKey('HKWasUserEntered') == true ? dataPoint['metadata']['HKWasUserEntered'] == 1.0 : null,
+      dateTime: DateTime.fromMillisecondsSinceEpoch(dataPoint['date_from'] as int),
     );
   }
 
   @override
   Function get fromJsonFunction => _$MenstruationFlowHealthValueFromJson;
 
-  factory MenstruationFlowHealthValue.fromJson(Map<String, dynamic> json) =>
-      FromJsonFactory().fromJson(json) as MenstruationFlowHealthValue;
+  factory MenstruationFlowHealthValue.fromJson(Map<String, dynamic> json) => FromJsonFactory().fromJson(json) as MenstruationFlowHealthValue;
 
   @override
   Map<String, dynamic> toJson() => _$MenstruationFlowHealthValueToJson(this);
@@ -889,6 +864,5 @@ class MenstruationFlowHealthValue extends HealthValue {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(flow, isStartOfCycle, wasUserEntered, dateTime);
+  int get hashCode => Object.hash(flow, isStartOfCycle, wasUserEntered, dateTime);
 }

@@ -73,8 +73,7 @@ class Health {
 
   Future<List<HealthActivitySummary>> getActivityRingData(DateTime start, DateTime end) async {
     try {
-      final res =
-          await _channel.invokeMethod('getActivityRingData', {"start": DateFormat("yyyy-MM-dd").format(start), "end": DateFormat("yyyy-MM-dd").format(end)});
+      final res = await _channel.invokeMethod('getActivityRingData', {"start": start.millisecondsSinceEpoch, "end": end.millisecondsSinceEpoch});
       final list = res as List;
       return list.map((e) => HealthActivitySummary.fromJson(Map.castFrom(e as Map))).toList();
     } catch (e) {
@@ -83,14 +82,23 @@ class Health {
     }
   }
 
-  Future<void> getHeartBeatData(DateTime start, DateTime end) async {
+  Future<List<HrvData>> getHRVData(DateTime start, DateTime end) async {
     try {
-      final res = await _channel
-          .invokeMethod('getHeartBeatData', {"start": DateFormat("yyyy-MM-dd mm:HH:ss").format(start), "end": DateFormat("yyyy-MM-dd mm:HH:ss").format(end)});
-      print(res);
+      final hrvList = await getHealthDataFromTypes(types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN], startTime: start, endTime: end);
+      print(hrvList.length);
+      final res = await Future.wait(hrvList.map((e) => getHrvRecord(e.dateFrom, e.dateTo)));
+      res.sort((a, b) => b.to.compareTo(a.to));
+      print(res.length);
+      return res;
     } catch (e) {
       print(e);
+      return [];
     }
+  }
+
+  Future<HrvData> getHrvRecord(DateTime from, DateTime to) async {
+    final res = await _channel.invokeMethod('getHeartBeatData', {"start": from.millisecondsSinceEpoch, "end": to.millisecondsSinceEpoch});
+    return HrvData.fromJson(Map.castFrom(res as Map));
   }
 
   /// Determines if the health data [types] have been granted with the specified
@@ -653,6 +661,17 @@ class Health {
     };
     bool? success = await _channel.invokeMethod('writeMeal', args);
     return success ?? false;
+  }
+
+  Future<List<WorkoutRouteData>> getWorkoutRouteData(String uuid, DateTime start, DateTime end) async {
+    try {
+      final res = await _channel.invokeMethod("getWorkoutRoute", {"start": start.millisecondsSinceEpoch, 'end': end.millisecondsSinceEpoch, "workoutId": uuid});
+      final list = res as List;
+      return list.map((e) => WorkoutRouteData.fromJson(Map.castFrom(e as Map))).toList();
+    } catch (e) {
+      print(e);
+      return [];
+    }
   }
 
   /// Save menstruation flow into Apple Health and Google Health Connect.

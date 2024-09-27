@@ -102,6 +102,7 @@ const _$HealthDataTypeEnumMap = {
   HealthDataType.DIETARY_MOLYBDENUM: 'DIETARY_MOLYBDENUM',
   HealthDataType.DIETARY_SELENIUM: 'DIETARY_SELENIUM',
   HealthDataType.FORCED_EXPIRATORY_VOLUME: 'FORCED_EXPIRATORY_VOLUME',
+  HealthDataType.HEART_BEAT: 'HEART_BEAT',
   HealthDataType.HEART_RATE: 'HEART_RATE',
   HealthDataType.HEART_RATE_VARIABILITY_SDNN: 'HEART_RATE_VARIABILITY_SDNN',
   HealthDataType.HEART_RATE_VARIABILITY_RMSSD: 'HEART_RATE_VARIABILITY_RMSSD',
@@ -141,6 +142,11 @@ const _$HealthDataTypeEnumMap = {
   HealthDataType.HEADACHE_SEVERE: 'HEADACHE_SEVERE',
   HealthDataType.HEADACHE_UNSPECIFIED: 'HEADACHE_UNSPECIFIED',
   HealthDataType.NUTRITION: 'NUTRITION',
+  HealthDataType.VO2MAX: 'VO2MAX',
+  HealthDataType.TIME_IN_DAY_LIGHT: 'TIME_IN_DAY_LIGHT',
+  HealthDataType.WRIST_TEMPERATURE: 'WRIST_TEMPERATURE',
+  HealthDataType.ACTIVITY_RING: 'ACTIVITY_RING',
+  HealthDataType.WORKOUT_ROUTE: 'WORKOUT_ROUTE',
   HealthDataType.GENDER: 'GENDER',
   HealthDataType.BIRTH_DATE: 'BIRTH_DATE',
   HealthDataType.BLOOD_TYPE: 'BLOOD_TYPE',
@@ -203,6 +209,8 @@ const _$HealthDataUnitEnumMap = {
   HealthDataUnit.MILLIGRAM_PER_DECILITER: 'MILLIGRAM_PER_DECILITER',
   HealthDataUnit.UNKNOWN_UNIT: 'UNKNOWN_UNIT',
   HealthDataUnit.NO_UNIT: 'NO_UNIT',
+  HealthDataUnit.VO2MAX: 'VO2MAX',
+  HealthDataUnit.UV_EXPOSURE: 'UV_EXPOSURE',
 };
 
 const _$HealthPlatformTypeEnumMap = {
@@ -281,6 +289,8 @@ WorkoutHealthValue _$WorkoutHealthValueFromJson(Map<String, dynamic> json) =>
       workoutActivityType: $enumDecode(
           _$HealthWorkoutActivityTypeEnumMap, json['workout_activity_type']),
       totalEnergyBurned: (json['total_energy_burned'] as num?)?.toInt(),
+      dateFrom: DateTime.parse(json['date_from'] as String),
+      dateTo: DateTime.parse(json['date_to'] as String),
       totalEnergyBurnedUnit: $enumDecodeNullable(
           _$HealthDataUnitEnumMap, json['total_energy_burned_unit']),
       totalDistance: (json['total_distance'] as num?)?.toInt(),
@@ -289,6 +299,12 @@ WorkoutHealthValue _$WorkoutHealthValueFromJson(Map<String, dynamic> json) =>
       totalSteps: (json['total_steps'] as num?)?.toInt(),
       totalStepsUnit: $enumDecodeNullable(
           _$HealthDataUnitEnumMap, json['total_steps_unit']),
+      met: (json['met'] as num?)?.toDouble(),
+      indoor: json['indoor'] as bool?,
+      uuid: json['uuid'] as String?,
+      elevationAscended: (json['elevation_ascended'] as num?)?.toDouble(),
+      humidity: (json['humidity'] as num?)?.toDouble(),
+      temperature: (json['temperature'] as num?)?.toDouble(),
     )..$type = json['__type'] as String?;
 
 Map<String, dynamic> _$WorkoutHealthValueToJson(WorkoutHealthValue instance) {
@@ -312,6 +328,13 @@ Map<String, dynamic> _$WorkoutHealthValueToJson(WorkoutHealthValue instance) {
   writeNotNull('total_steps', instance.totalSteps);
   writeNotNull(
       'total_steps_unit', _$HealthDataUnitEnumMap[instance.totalStepsUnit]);
+  writeNotNull('met', instance.met);
+  writeNotNull('elevation_ascended', instance.elevationAscended);
+  writeNotNull('temperature', instance.temperature);
+  writeNotNull('humidity', instance.humidity);
+  writeNotNull('indoor', instance.indoor);
+  val['date_from'] = instance.dateFrom.toIso8601String();
+  val['date_to'] = instance.dateTo.toIso8601String();
   return val;
 }
 

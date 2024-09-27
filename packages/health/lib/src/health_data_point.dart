@@ -101,6 +101,7 @@ class HealthDataPoint {
     HealthDataType dataType,
     dynamic dataPoint,
   ) {
+
     // Handling different [HealthValue] types
     HealthValue value = switch (dataType) {
       HealthDataType.AUDIOGRAM =>
