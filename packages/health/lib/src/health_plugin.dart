@@ -83,6 +83,16 @@ class Health {
     }
   }
 
+  Future<void> getHeartBeatData(DateTime start, DateTime end) async {
+    try {
+      final res = await _channel
+          .invokeMethod('getHeartBeatData', {"start": DateFormat("yyyy-MM-dd mm:HH:ss").format(start), "end": DateFormat("yyyy-MM-dd mm:HH:ss").format(end)});
+      print(res);
+    } catch (e) {
+      print(e);
+    }
+  }
+
   /// Determines if the health data [types] have been granted with the specified
   /// access rights [permissions].
   ///

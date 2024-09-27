@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:health/health.dart';
+import 'package:health_example/list_extension.dart';
 import 'package:health_example/util.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -112,7 +114,15 @@ class _HealthAppState extends State<HealthApp> {
 
   void fetchActivityRingData() async {
     final res = await Health().getActivityRingData(DateTime.now(), DateTime.now());
-    print(res);
+  }
+
+  fetchHeartBeat() async {
+    final now = DateTime.now();
+    final hrvList = await Health()
+        .getHealthDataFromTypes(types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN], startTime: DateTime(now.year, now.month, now.day), endTime: now, limit: 1);
+    if (hrvList.isEmpty) return;
+    print(hrvList.first.toJson());
+    await Health().getHeartBeatData(hrvList.first.dateFrom, hrvList.first.dateTo);
   }
 
   /// Fetch data points from the health plugin and show them in the app.
@@ -128,22 +138,19 @@ class _HealthAppState extends State<HealthApp> {
 
     try {
       // fetch health data
-      List<HealthDataPoint> healthData = await Health().getHealthDataFromTypes(
-        types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN],
-        startTime: now.subtract(const Duration(days: 100)),
-        endTime: now,
-        limit: 1,
-      );
-
-      print(healthData.firstOrNull?.toJson());
-      print(healthData.lastOrNull?.toJson());
-
-      print(healthData.first.dateTo.difference(healthData.first.dateFrom).inMilliseconds);
-
+      List<HealthDataPoint> healthData = await Health()
+          .getHealthDataFromTypes(types: [HealthDataType.HEART_RATE_VARIABILITY_SDNN], startTime: DateTime(now.year, now.month, now.day), endTime: now);
       debugPrint('Total number of data points: ${healthData.length}. '
           '${healthData.length > 100 ? 'Only showing the first 100.' : ''}');
-
-      // save all the new data points (only the first 100)
+      final List<num> values = healthData.map((e) {
+        return (e.value as NumericHealthValue).numericValue;
+      }).toList();
+      List<num> vals = [];
+      for (int i = 1; i < values.length; i++) {
+        num v = values[i] - values[i - 1];
+        vals.add(v);
+      }
+      print(vals);
       _healthDataList.addAll((healthData.length < 100) ? healthData : healthData.sublist(0, 100));
     } catch (error) {
       debugPrint("Exception in getHealthDataFromTypes: $error");
@@ -389,9 +396,9 @@ class _HealthAppState extends State<HealthApp> {
                       style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
                   TextButton(
                       onPressed: () {
-                        fetchWorkData();
+                        fetchHeartBeat();
                       },
-                      child: Text("Workout", style: TextStyle(color: Colors.white)),
+                      child: Text("HeartBeat", style: TextStyle(color: Colors.white)),
                       style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(Colors.blue))),
                   TextButton(
                       onPressed: fetchStepData,

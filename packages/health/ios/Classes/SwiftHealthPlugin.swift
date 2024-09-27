@@ -160,6 +160,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let TIME_IN_DAY_LIGHT = "TIME_IN_DAY_LIGHT"
     let WRIST_TEMPERATURE = "WRIST_TEMPERATURE"
     let ACTIVITY_RING = "ACTIVITY_RING"
+    let HEART_BEAT: String = "HEART_BEAT"
 
     
     // Health Unit types
@@ -303,8 +304,9 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             result(true)
         }else if(call.method.elementsEqual("getActivityRingData")){
           try! self.getActivityRingData(call: call, result: result)
+        }else if(call.method.elementsEqual("getHeartBeatData")){
+           try! self.getHeartBeatData(call: call, result: result)
         }
-        
     }
     
     func checkIfHealthDataAvailable(call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -367,6 +369,88 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    func getHeartBeatData(call: FlutterMethodCall, result: @escaping FlutterResult)throws{
+        let calendar = NSCalendar.current
+        let dateFormatter = DateFormatter()
+        // 设置日期格式，匹配字符串格式 "yyyy-MM-dd"
+        dateFormatter.dateFormat = "yyyy-MM-dd mm:HH:ss"
+        let arguments = call.arguments as? NSDictionary
+        var startDate:Date? = dateFormatter.date(from: arguments?["start"] as? String ?? "")
+        var endDate:Date? = dateFormatter.date(from: arguments?["end"] as? String ?? "")
+
+        guard startDate != nil && endDate != nil else{
+            result([])
+            return
+        }
+
+
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate,
+                                                       ascending: true)
+            let timeInterval = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+            let heartBeatSamples = HeartBeatSamples()
+            let heartbeatSeriesSampleQuery = HKSampleQuery(sampleType: HKSeriesType.heartbeat(),
+                                                            predicate: timeInterval,
+                                                            limit: HKObjectQueryNoLimit,
+                                                            sortDescriptors: [sortDescriptor]) {
+                 (query, results, error) in
+
+                if let samples = results {
+
+                    var numberOfSamplesProcessed = 0
+
+                    var previoustimeSinceStart = 0.0
+
+                    for sample in samples {
+
+                        let sample = sample as! HKHeartbeatSeriesSample
+
+                        let heartbeatSeriesQuery = HKHeartbeatSeriesQuery(heartbeatSeries: sample ) {
+                            (query, timeSinceSeriesStart, precededByGap, done, error) in
+
+                            guard error == nil else {
+                                print("error in HKHeartbeatSeriesQuery: \(String(describing: error))")
+                                return
+                            }
+
+                            let timeSinceLastSample = timeSinceSeriesStart - previoustimeSinceStart
+
+                            if(!precededByGap) {
+
+                                let currentTimestamp = sample.startDate.addingTimeInterval(timeSinceSeriesStart)
+
+                                let beatsPerMinute = 60 / timeSinceLastSample
+
+                                let rrInterval = timeSinceLastSample * 1000
+
+                                heartBeatSamples.addSample(timestamp: currentTimestamp, timeSinceLastBeat: timeSinceSeriesStart, rrInterval: rrInterval, beatsPerMinute: beatsPerMinute, precededByGap: precededByGap)
+
+                            }
+
+                            previoustimeSinceStart = timeSinceSeriesStart
+
+                            if(done) {
+                                numberOfSamplesProcessed += 1
+                            }
+
+                            if(numberOfSamplesProcessed == samples.count)
+                            {
+                                result([
+                                    "start": dateFormatter.string(from:startDate!),
+                                    "end": dateFormatter.string(from:endDate!),
+                                    "SDNN": heartBeatSamples.sdnn(),
+                                    "RMSSD": heartBeatSamples.rmssd(),
+                                ])
+                            }
+                        }
+
+                        self.healthStore.execute(heartbeatSeriesQuery)
+
+                    }
+                }
+             }
+            self.healthStore.execute(heartbeatSeriesSampleQuery)
+    }
+
     func getActivityRingData(call: FlutterMethodCall, result: @escaping FlutterResult)throws{
         let calendar = NSCalendar.current
         let dateFormatter = DateFormatter()
@@ -424,10 +508,17 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         }
         
         var typesToRead = Set<HKObjectType>()
-        typesToRead.insert(.activitySummaryType())
+//        typesToRead.insert(.activitySummaryType())
+//        typesToRead.insert(HKSeriesType.heartbeat())
         var typesToWrite = Set<HKSampleType>()
         for (index, key) in types.enumerated() {
-            if (key == NUTRITION) {
+           if(key == HEART_BEAT){
+               typesToRead.insert(HKSeriesType.heartbeat())
+           }
+           else if(key == ACTIVITY_RING){
+               typesToRead.insert(HKActivitySummaryType.activitySummaryType())
+           }
+           else if (key == NUTRITION) {
                 for nutritionType in nutritionList {
                     let nutritionData = dataTypeLookUp(key: nutritionType)
                     typesToWrite.insert(nutritionData)
@@ -1825,5 +1916,32 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         default:
             return "other"
         }
+    }
+}
+
+
+class HeartBeatSamples
+{
+    var rrIntervals: [Double] = []
+    func addSample(timestamp: Date, timeSinceLastBeat: Double, rrInterval: Double, beatsPerMinute: Double, precededByGap: Bool)
+    {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        let dateStr = dateFormatter.string(from: timestamp)
+        rrIntervals.append(rrInterval)
+    }
+
+    func sdnn() -> Double{
+        let meanRR = rrIntervals.reduce(0, +) / Double(rrIntervals.count)
+        let squaredDifferences = rrIntervals.map { ($0 - meanRR) * ($0 - meanRR) }
+        let variance = squaredDifferences.reduce(0, +) / Double(rrIntervals.count - 1)
+        return sqrt(variance)
+    }
+
+    func rmssd() -> Double{
+        let successiveDifferences = (1..<rrIntervals.count).map { rrIntervals[$0] - rrIntervals[$0 - 1] }
+        let squaredDifferences = successiveDifferences.map { $0 * $0 }
+        let meanSquaredDifferences = squaredDifferences.reduce(0, +) / Double(successiveDifferences.count)
+        return sqrt(meanSquaredDifferences)
     }
 }
