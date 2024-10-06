@@ -13,7 +13,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import 'src/health_activity_summary.dart';
+part 'src/health_activity_summary.dart';
 
 part 'src/heath_data_types.dart';
 part 'src/functions.dart';
