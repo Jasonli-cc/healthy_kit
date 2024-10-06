@@ -1,3 +1,6 @@
+part of '../health.dart';
+
+
 class HealthActivitySummary {
   final double appleExerciseTime;
   final double appleExerciseTimeGoal;

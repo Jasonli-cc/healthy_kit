@@ -1,3 +1,5 @@
+part of '../health.dart';
+
 class HrvData {
   final DateTime from;
   final DateTime to;

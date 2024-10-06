@@ -14,13 +14,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 part 'src/health_activity_summary.dart';
-
 part 'src/heath_data_types.dart';
 part 'src/functions.dart';
 part 'src/health_data_point.dart';
 part 'src/health_value_types.dart';
 part 'src/health_plugin.dart';
 part 'src/workout_summary.dart';
+part 'src/hrv_data.dart'
 
 part 'health.g.dart';
 part 'health.json.dart';

@@ -1,3 +1,5 @@
+part of '../health.dart';
+
 class WorkoutRouteData {
   final double lat;
   final double lon;
